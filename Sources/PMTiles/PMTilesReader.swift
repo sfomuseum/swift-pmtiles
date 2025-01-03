@@ -5,7 +5,6 @@ public struct PMTilesReader {
     
     private var reader: reader
     public var Logger: Logger?
-    // private var mu: DispatchSemaphore
     
     public init(db: URL, use_file_descriptor: Bool = false) throws {
 
@@ -14,8 +13,6 @@ public struct PMTilesReader {
         if case .failure(let error) = reader.open() {
             throw error
         }
-        
-        // mu = DispatchSemaphore(value: 1)
     }
     
     public func Size() -> Result<UInt64, Error> {

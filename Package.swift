@@ -28,7 +28,11 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "swift-pmtilesTests",
-            dependencies: ["PMTiles"]),
+            name: "PMTilesTests",
+            dependencies: ["PMTiles"],
+            resources: [
+                        .process("Resources/sfo.pmtiles")
+            ]
+        ),
     ]
 )
