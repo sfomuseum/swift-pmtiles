@@ -1,5 +1,6 @@
 import XCTest
 import Foundation
+import Logging
 @testable import PMTiles
 
 enum PMTilesTestsError: Error {
@@ -13,7 +14,10 @@ final class PMTilesTests: XCTestCase {
             throw PMTilesTestsError.unknown
         }
 
-        var r = try PMTilesReader(db: db_url, use_file_descriptor: true)
+        var logger = Logger(label: "org.sfomuseum.swift-pmtiles.tests")
+        logger.logLevel = .debug
+        
+        var r = try PMTilesReader(db: db_url, use_file_descriptor: true, logger: logger)
         
         if case .failure(let error) = r.Read(from: 0, to: 1024) {
             throw error

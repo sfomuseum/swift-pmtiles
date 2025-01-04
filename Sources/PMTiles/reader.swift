@@ -1,5 +1,6 @@
 import Foundation
 import System
+import Logging
 
 internal enum readerError: Error {
     case notOpen
@@ -17,12 +18,15 @@ internal struct reader {
     private var fd: FileDescriptor?
     private var mu: DispatchSemaphore
     private var is_open: Bool = false
+    private var logger: Logger?
+    private var filesize: UInt64?
     
-    internal init(database: URL, use_file_descriptor: Bool) {
-        db_url = database
-        db_path = db_url.absoluteString
-        use_fd = use_file_descriptor
-        mu = DispatchSemaphore(value: 1)
+    internal init(database: URL, use_file_descriptor: Bool, logger: Logger? = nil) {
+        self.db_url = database
+        self.db_path = db_url.absoluteString
+        self.use_fd = use_file_descriptor
+        self.logger = logger
+        self.mu = DispatchSemaphore(value: 1)
     }
     
     internal mutating func open() -> Result<Void, Error> {
@@ -35,6 +39,8 @@ internal struct reader {
         
         if !is_open {
             
+            self.logger?.debug("Open database \(self.db_path)")
+            
             do {
                 
                 if self.use_fd {
@@ -45,6 +51,7 @@ internal struct reader {
                 }
                 
             } catch {
+                self.logger?.error("Failed to open \(self.db_path), \(error)")
                 return .failure(error)
             }
             
@@ -66,6 +73,8 @@ internal struct reader {
             return .failure(readerError.notOpen)
         }
         
+        self.logger?.debug("Close \(self.db_path)")
+        
             do {
                 
                 if self.use_fd {
@@ -75,6 +84,7 @@ internal struct reader {
                 }
                 
             } catch (let error) {
+                self.logger?.error("Failed to close \(self.db_path), \(error)")
                 return .failure(error)
             }
             
@@ -83,7 +93,11 @@ internal struct reader {
         return .success(())
     }
     
-    internal func size() -> Result<UInt64, Error> {
+    internal mutating func size() -> Result<UInt64, Error> {
+        
+        if self.filesize != nil {
+            return .success(self.filesize!)
+        }
         
         self.mu.wait()
         
@@ -105,9 +119,11 @@ internal struct reader {
                  size = try fh!.seekToEnd()
              }
          } catch (let error){
+             self.logger?.error("Failed to determined size for \(self.db_path), \(error)")
              return .failure(error)
          }
         
+        self.filesize = size
         return .success(size)
     }
     
@@ -122,15 +138,19 @@ internal struct reader {
         if !is_open{
             return .failure(readerError.notOpen)
         }
-        
+                
         let next = to + 1
         let body: Data!
                     
+        self.logger?.debug("Read bytes from \(self.db_path) from: \(from) to: \(to) next: \(next)")
+        
         if self.use_fd {
             
             let read_len = Int(UInt64(next) - from)
+            self.logger?.debug("Read length for file descritor: \(read_len)")
             
             guard let data = readData(from: fd!.rawValue, length: Int(read_len)) else {
+                self.logger?.error("Failed to read data from \(self.db_path)")
                 return .failure(readerError.readError)
             }
             
@@ -138,9 +158,12 @@ internal struct reader {
             
         } else {
             
+            self.logger?.debug("Read up to from file handle: \(next)")
+            
             do {
                 body = try fh?.read(upToCount: Int(next))
             } catch (let error){
+                self.logger?.error("Failed to read data from \(self.db_path), \(error)")
                 return .failure(error)
             }
         }
@@ -160,15 +183,17 @@ internal struct reader {
             return .failure(readerError.notOpen)
         }
         
+        self.logger?.debug("Seek \(self.db_path) to: \(to)")
+        
         do {
-                        
             if self.use_fd {
-                try fd!.seek(offset: Int64(from), from: FileDescriptor.SeekOrigin.start)
+                try fd!.seek(offset: Int64(to), from: FileDescriptor.SeekOrigin.start)
             } else {
-                fh!.seek(toFileOffset: from)
+                fh!.seek(toFileOffset: to)
             }
             
         } catch {
+            self.logger?.error("Failed to seek to \(to), \(error)")
             return .failure(error)
         }
         

@@ -4,18 +4,21 @@ import Logging
 public struct PMTilesReader {
     
     private var reader: reader
-    public var Logger: Logger?
     
-    public init(db: URL, use_file_descriptor: Bool = false) throws {
+    public init(db: URL, use_file_descriptor: Bool = false, logger: Logger? = nil) throws {
 
-        reader = PMTiles.reader(database: db, use_file_descriptor: use_file_descriptor)
+        reader = PMTiles.reader(
+            database: db,
+            use_file_descriptor: use_file_descriptor,
+            logger: logger
+        )
         
         if case .failure(let error) = reader.open() {
             throw error
         }
     }
     
-    public func Size() -> Result<UInt64, Error> {
+    public mutating func Size() -> Result<UInt64, Error> {
         return self.reader.size()
     }
     
