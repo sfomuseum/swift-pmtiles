@@ -17,17 +17,20 @@ final class PMTilesTests: XCTestCase {
         var logger = Logger(label: "org.sfomuseum.swift-pmtiles.tests")
         logger.logLevel = .debug
         
-        var r = try PMTilesReader(db: db_url, use_file_descriptor: true, logger: logger)
+        var reader_opts = PMTilesReaderOptions(db_url, use_file_descriptor: true)
+        reader_opts.Logger = logger
         
-        if case .failure(let error) = r.Read(from: 0, to: 1024) {
+        var reader = try PMTilesReader(reader_opts)
+        
+        if case .failure(let error) = reader.Read(from: 0, to: 1024) {
             throw error
         }
    
-        if case .failure(let error) = r.Size() {
+        if case .failure(let error) = reader.Size() {
             throw error
         }
         
-        if case .failure(let error) = r.Close() {
+        if case .failure(let error) = reader.Close() {
             throw error
         }
     }

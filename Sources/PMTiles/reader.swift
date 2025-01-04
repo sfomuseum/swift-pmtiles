@@ -51,7 +51,7 @@ internal struct reader {
                 }
                 
             } catch {
-                self.logger?.error("Failed to open \(self.db_path), \(error)")
+                self.logger?.error("Failed to open database, \(error)")
                 return .failure(error)
             }
             
@@ -73,7 +73,7 @@ internal struct reader {
             return .failure(readerError.notOpen)
         }
         
-        self.logger?.debug("Close \(self.db_path)")
+        self.logger?.debug("Close database")
         
             do {
                 
@@ -84,7 +84,7 @@ internal struct reader {
                 }
                 
             } catch (let error) {
-                self.logger?.error("Failed to close \(self.db_path), \(error)")
+                self.logger?.error("Failed to close database, \(error)")
                 return .failure(error)
             }
             
@@ -119,7 +119,7 @@ internal struct reader {
                  size = try fh!.seekToEnd()
              }
          } catch (let error){
-             self.logger?.error("Failed to determined size for \(self.db_path), \(error)")
+             self.logger?.error("Failed to determined size for database, \(error)")
              return .failure(error)
          }
         
@@ -142,7 +142,7 @@ internal struct reader {
         let next = to + 1
         let body: Data!
                     
-        self.logger?.debug("Read bytes from \(self.db_path) from: \(from) to: \(to) next: \(next)")
+        self.logger?.debug("Read bytes from from: \(from) to: \(to) next: \(next)")
         
         if self.use_fd {
             
@@ -150,7 +150,7 @@ internal struct reader {
             self.logger?.debug("Read length for file descritor: \(read_len)")
             
             guard let data = readData(from: fd!.rawValue, length: Int(read_len)) else {
-                self.logger?.error("Failed to read data from \(self.db_path)")
+                self.logger?.error("Failed to read data from file descriptor")
                 return .failure(readerError.readError)
             }
             
@@ -163,7 +163,7 @@ internal struct reader {
             do {
                 body = try fh?.read(upToCount: Int(next))
             } catch (let error){
-                self.logger?.error("Failed to read data from \(self.db_path), \(error)")
+                self.logger?.error("Failed to read data from file handle, \(error)")
                 return .failure(error)
             }
         }
@@ -171,7 +171,7 @@ internal struct reader {
         return .success(body)
     }
     
-    internal func seek(from: UInt64, to: UInt64) -> Result<Void, Error> {
+    internal func seekTo(to: UInt64) -> Result<Void, Error> {
         
         self.mu.wait()
         
@@ -183,7 +183,7 @@ internal struct reader {
             return .failure(readerError.notOpen)
         }
         
-        self.logger?.debug("Seek \(self.db_path) to: \(to)")
+        self.logger?.debug("Seek to: \(to)")
         
         do {
             if self.use_fd {
